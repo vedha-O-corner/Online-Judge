@@ -1,5 +1,6 @@
 const Submission = require("../models/submission");
 const Problem = require("../models/problem");
+const { judgeSubmission } = require("../services/judgeService");
 
 const submitCode = async (req, res) => {
     try {
@@ -25,6 +26,8 @@ const submitCode = async (req, res) => {
             language,
             code,
         });
+
+        judgeSubmission(submission._id);
 
         return res.status(201).json({
             message: "Submission created successfully",
