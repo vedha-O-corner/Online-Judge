@@ -1,10 +1,15 @@
 const Submission = require("../models/submission");
 const Problem = require("../models/problem");
 const { judgeSubmission } = require("../services/judgeService");
-
+const Contest = require("../models/contest");
 const submitCode = async (req, res) => {
     try {
-        const { problem, language, code } = req.body;
+        const {
+            problem,
+            language,
+            code,
+            contest,
+        } = req.body;
 
         if (!problem || !language || !code) {
             return res.status(400).json({
@@ -19,10 +24,57 @@ const submitCode = async (req, res) => {
                 message: "Problem not found",
             });
         }
+        if (contest) {
 
+            const existingContest = await Contest.findById(contest);
+
+            if (!existingContest) {
+                return res.status(404).json({
+                    message: "Contest not found",
+                });
+            }
+
+            const joined = existingContest.participants.some(
+                participant =>
+                    participant.toString() === req.user._id.toString()
+            );
+
+            if (!joined) {
+                return res.status(403).json({
+                    message: "Join the contest before submitting",
+                });
+            }
+
+            const now = new Date();
+
+            if (now < existingContest.startTime) {
+                return res.status(400).json({
+                    message: "Contest has not started yet",
+                });
+            }
+
+            if (now > existingContest.endTime) {
+                return res.status(400).json({
+                    message: "Contest has already ended",
+                });
+            }
+
+            const problemExists = existingContest.problems.some(
+                contestProblem =>
+                    contestProblem.toString() === problem
+            );
+
+            if (!problemExists) {
+                return res.status(400).json({
+                    message: "Problem does not belong to this contest",
+                });
+            }
+
+        }
         const submission = await Submission.create({
             user: req.user._id,
             problem,
+            contest: contest || null,
             language,
             code,
         });
@@ -67,8 +119,8 @@ const getMySubmissions = async (req, res) => {
         const submissions = await Submission.find({
             user: req.user._id,
         })
-        .populate("problem", "title difficulty")
-        .sort({ createdAt: -1 });
+            .populate("problem", "title difficulty")
+            .sort({ createdAt: -1 });
 
         return res.status(200).json({
             count: submissions.length,
@@ -115,7 +167,7 @@ const deleteSubmission = async (req, res) => {
 };
 
 
-module.exports={
+module.exports = {
     submitCode,
     getSubmissionById,
     getMySubmissions,
