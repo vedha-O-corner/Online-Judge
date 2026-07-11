@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const adminOnly = require("../middleware/adminMiddleware");
-const protect = require("../middleware/authMiddleware");
+const { protect, admin } = require("../middleware/authMiddleware");
 const {
     createProblem,
     getAllProblems,
